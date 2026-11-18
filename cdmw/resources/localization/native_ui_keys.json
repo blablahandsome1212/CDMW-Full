@@ -2713,6 +2713,7 @@
   "Zero weight",
   "_detailScreenSpaceDisplacementScale",
   "_dyeingColor",
+  "_heightTexture",
   "_screenSpaceDisplacementScale",
   "_uvScale",
   "a CDMW capture package and exactly one of --capture-output or --capture-audit-output must be supplied together",

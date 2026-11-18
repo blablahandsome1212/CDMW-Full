@@ -16805,6 +16805,7 @@
     "_detailScreenSpaceDisplacementScale": "_detailScreenSpaceDisplacementScale",
     "_dyeingColor": "_dyeingColor",
     "_emitterDynamicData": "_emitterDynamicData",
+    "_heightTexture": "_heightTexture",
     "_renderData": "_renderData",
     "_screenSpaceDisplacementScale": "_screenSpaceDisplacementScale",
     "_simulationData": "_simulationData",
