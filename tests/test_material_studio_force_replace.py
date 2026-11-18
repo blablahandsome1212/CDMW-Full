@@ -59,7 +59,8 @@ def test_a_cloth_material_is_refused_without_force_and_replaced_with_it():
 def test_left_out_textures_take_the_layout_default_or_no_row():
     edited, _ = rewrite_shader_controls(CLOTH, (("Blade", forced(dropped_textures=("_heightTexture", "_normalTexture"))),))
     textures = control_material_sources(edited)["blade"][2]
-    assert "_heightTexture" not in textures and "_normalTexture" not in textures
+    # The veil reads height as thread width: a left-out map becomes even full-width threads.
+    assert textures["_heightTexture"] == "texture/nonetexture0xffffffff.dds" and "_normalTexture" not in textures
     assert textures["_baseColorTexture"].endswith("shirt.dds")
     glass, _ = rewrite_shader_controls(CLOTH, (("Blade", forced("SkinnedMeshGlass", (("_tintOpacity", (0.3,)),),
                                                                   dropped_textures=("_heightTexture",))),))

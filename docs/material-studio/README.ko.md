@@ -286,6 +286,7 @@
   - 강제로 고른 셰이더도 슬라이더를 움직이는 동안 실시간 미리보기가 된다(`preview_base`에 포함).
   - "원본 재질에서 유지할 텍스처" 체크박스가 나온다. `_baseColorTexture`는 항상 유지하고, normal / material / height 텍스처는 끌 수 있다. 끈 텍스처는 셰이더 기본값(비어 있음)으로 쓴다.
 - base 텍스처가 없는 재질(색을 전부 디테일 레이어에서 가져오는 Ver2 의상, 예: `cd_phw_00_uw_00_0001`)은 게임의 단색 텍스처 `texture/nonetexture0xffRRGGBB.dds`를 base로 쓴다. 색은 `_dyeingDetailLayerColorMaskR` → `_tintColorR` → `_dyeingColor` 순으로 찾고, 없으면 회색(888888)이다. 게임 정의 파일이 기본값으로 같은 형식(`nonetexture0xff888888`)을 쓰지만, base 자리에서 동작하는지는 인게임 확인이 필요하다.
+- 망사로 강제 교체할 때는 원본의 `_heightTexture`를 기본으로 빼고 흰색 단색(`texture/nonetexture0xffffffff.dds`)을 넣는다. 일반 의상의 높이 맵은 표면 변위 맵이라 거의 검은색이고(속옷 `phw_00_uw_00_0001_disp` 평균 0.043), 망사는 이를 실 굵기로 읽어 부위 전체가 사라졌다(사용자 보고, 2026-11-19). 체크박스로 원본 맵을 다시 유지하거나, 텍스처 교체로 실 굵기 맵을 넣을 수 있다.
 - 대가: 원본이 셰이더 안에서 섞던 염색 색과 디테일 레이어는 사라진다. base 텍스처가 회색인 의상은 회색이 된다. 미리보기로 판단한다.
 - 데이터: `ShaderControls.force`, `ShaderControls.dropped_textures`. force는 rebuild 없이 쓸 수 없고, dropped_textures에는 그 셰이더 구성의 텍스처 이름(base 제외)만 들어간다.
 - 테스트: `tests/test_material_studio_force_replace.py`(Cloth_Ver2 + Cloth 픽스처, 거부·교체·텍스처 제외·직렬화·Ver2 직접 교체), Rust 헤드리스 `force_replace_opens_a_refused_shader_and_sends_the_rewrite_with_the_kept_textures`.

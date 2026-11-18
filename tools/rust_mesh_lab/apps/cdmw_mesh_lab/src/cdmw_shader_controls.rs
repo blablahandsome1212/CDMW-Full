@@ -209,8 +209,7 @@ impl LabApplication {
                     .changed() {
                     let shader = value["shader"].as_str().unwrap_or("").to_owned();
                     if force_mode && forceable(&shader) {
-                        value["rebuild"] = json!(true);
-                        value["force"] = json!(true);
+                        force_defaults(&mut value);
                     } else if let Some(object) = value.as_object_mut() {
                         object.remove("force");
                     }
@@ -254,8 +253,7 @@ impl LabApplication {
                 if shader != chosen {
                     value = json!({"shader": shader, "values": {}});
                     if force_mode && forceable(&shader) {
-                        value["rebuild"] = json!(true);
-                        value["force"] = json!(true);
+                        force_defaults(&mut value);
                     }
                 }
                 reason = if shader.is_empty() { None } else { unavailable_reason(&shader) };
@@ -632,5 +630,17 @@ fn veil_field_unread(shader: &str, name: &str, layered: bool) -> bool {
         matches!(name, "_uvScale" | "_dyeingColor")
     } else {
         matches!(name, "_screenSpaceDisplacementScale" | "_detailScreenSpaceDisplacementScale")
+    }
+}
+
+
+/// Turns on force replace. A source's height map is a surface displacement map,
+/// nearly black, and the net veil reads it as thread width, which hides the
+/// whole part; so the veil leaves it out by default and gets an even white one.
+fn force_defaults(value: &mut Value) {
+    value["rebuild"] = json!(true);
+    value["force"] = json!(true);
+    if value["shader"] == "SkinnedMeshTransparency" && value["dropped_textures"].is_null() {
+        value["dropped_textures"] = json!(["_heightTexture"]);
     }
 }

@@ -9289,7 +9289,8 @@ fn force_replace_opens_a_refused_shader_and_sends_the_rewrite_with_the_kept_text
     ui.settle_layout();
     // The rewrite is forced on, and the kept textures can be chosen.
     assert!(shows(&ui, "Keep these textures from the source material:"));
-    ui.click("Height texture")?;
+    // The veil leaves the source height map out by default (it reads it as thread width).
+    ui.click("Normal texture")?;
     std::thread::sleep(std::time::Duration::from_millis(400));
     let sent = settled_shader_actions(&mut ui).into_iter().find_map(|action| match action {
         UiAction::CdmwCommand { command, arguments, .. } if command == "replacement_shader_controls" => Some(arguments),
@@ -9298,7 +9299,7 @@ fn force_replace_opens_a_refused_shader_and_sends_the_rewrite_with_the_kept_text
     assert_eq!(sent["shader_controls"]["shader"], "SkinnedMeshTransparency");
     assert_eq!(sent["shader_controls"]["force"], json!(true));
     assert_eq!(sent["shader_controls"]["rebuild"], json!(true));
-    assert_eq!(sent["shader_controls"]["dropped_textures"], json!(["_heightTexture"]));
+    assert_eq!(sent["shader_controls"]["dropped_textures"], json!(["_heightTexture", "_normalTexture"]));
     Ok(())
 }
 

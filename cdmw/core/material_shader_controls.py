@@ -423,6 +423,9 @@ def rebuild_material_layout(block, family, dropped=(), *, force=False):
                 old = None  # Left out by the user: the layout's default, or no row.
             child = old.find("ResourceReferencePath_ITexture") if old is not None else None
             value = child.get("_path", "") if child is not None else default
+            if force and old is None and family.shader == "SkinnedMeshTransparency" and name == "_heightTexture":
+                # Even full-width threads; the user's thread map can replace it.
+                value = "texture/nonetexture0xffffffff.dds"
         else:
             value = old.get("_value", "") if old is not None else default
         if value is None or (old is not None and old.tag != "MaterialParameter" + kind):
