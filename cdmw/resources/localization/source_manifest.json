@@ -32101,12 +32101,12 @@
       "origins": [
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 966,
+          "line": 1007,
           "sink": "ValueError"
         },
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1031,
+          "line": 1077,
           "sink": "ValueError"
         }
       ]
@@ -32381,7 +32381,7 @@
       "origins": [
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1037,
+          "line": 1083,
           "sink": "ValueError"
         }
       ]
@@ -145646,22 +145646,22 @@
         },
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 990,
+          "line": 1036,
           "sink": "raise_if_cancelled"
         },
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1122,
+          "line": 1211,
           "sink": "raise_if_cancelled"
         },
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1158,
+          "line": 1247,
           "sink": "raise_if_cancelled"
         },
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1224,
+          "line": 1313,
           "sink": "raise_if_cancelled"
         }
       ]
@@ -172286,12 +172286,12 @@
       "origins": [
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1099,
+          "line": 1188,
           "sink": "ValueError"
         },
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1313,
+          "line": 1402,
           "sink": "ValueError"
         }
       ]
@@ -172301,7 +172301,7 @@
       "origins": [
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1147,
+          "line": 1236,
           "sink": "ValueError"
         }
       ]
@@ -172311,7 +172311,7 @@
       "origins": [
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1227,
+          "line": 1316,
           "sink": "ValueError"
         }
       ]
@@ -176756,7 +176756,7 @@
         },
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1331,
+          "line": 1420,
           "sink": "ValueError"
         }
       ]
@@ -176816,7 +176816,7 @@
       "origins": [
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1342,
+          "line": 1431,
           "sink": "ValueError"
         }
       ]
@@ -177006,7 +177006,7 @@
       "origins": [
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1047,
+          "line": 1099,
           "sink": "ValueError"
         }
       ]
@@ -177028,6 +177028,16 @@
           "path": "cdmw/ui/mesh_editor/folder_model_picker.py",
           "line": 55,
           "sink": "QLabel"
+        }
+      ]
+    },
+    {
+      "key": "This folder holds more than 64 models across its mods. Choose a folder with fewer of them.",
+      "origins": [
+        {
+          "path": "cdmw/services/mesh_saved_work_service.py",
+          "line": 992,
+          "sink": "ValueError"
         }
       ]
     },
@@ -177356,7 +177366,12 @@
       "origins": [
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1071,
+          "line": 1123,
+          "sink": "ValueError"
+        },
+        {
+          "path": "cdmw/services/mesh_saved_work_service.py",
+          "line": 1160,
           "sink": "ValueError"
         }
       ]
@@ -218891,7 +218906,7 @@
         },
         {
           "path": "cdmw/services/mesh_saved_work_service.py",
-          "line": 1073,
+          "line": 1125,
           "sink": "python-return:add_built_mod_folder"
         },
         {
@@ -219015,6 +219030,11 @@
       "key": "{value_0} / {value_1}",
       "origins": [
         {
+          "path": "cdmw/services/mesh_saved_work_service.py",
+          "line": 1162,
+          "sink": "python-return:_add_folder_mods"
+        },
+        {
           "path": "cdmw/ui/archive_browser/asset_catalog_dialog.py",
           "line": 466,
           "sink": "setData"
@@ -219113,6 +219133,16 @@
           "path": "cdmw/ui/archive_browser/asset_catalog_dialog.py",
           "line": 649,
           "sink": "setText"
+        }
+      ]
+    },
+    {
+      "key": "{value_0} / {value_1} - {value_2}",
+      "origins": [
+        {
+          "path": "cdmw/services/mesh_saved_work_service.py",
+          "line": 1162,
+          "sink": "python-return:_add_folder_mods"
         }
       ]
     },

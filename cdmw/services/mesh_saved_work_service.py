@@ -954,6 +954,47 @@ def folder_model_paths(mod_root: Path | str, *, limit: int = MAX_FOLDER_MODELS) 
     return list(paths.values())[:limit]
 
 
+_DUPLICATE_COPIES = "This folder holds more than one copy of the same game file."
+
+
+def _is_payload_folder(name: str) -> bool:
+    """A folder that is part of a mod's game paths, not a mod or variant of its own."""
+
+    from cdmw.domain.packages.layout import _KNOWN_MOD_CONTENT_ROOTS
+
+    lowered = name.casefold()
+    return lowered in {"files", "gamedata", *_KNOWN_MOD_CONTENT_ROOTS} or re.fullmatch(r"\d{4}", lowered) is not None
+
+
+def folder_mods(mod_root: Path | str, *, limit: int = MAX_FOLDER_MODELS) -> list[tuple[Path, list[str]]]:
+    """The mods a folder holds, each with its own folder and models.
+
+    A folder of one mod is itself. A parent of several mods or variants (two
+    body variants, several of the user's mods) names the same game file more
+    than once; it is split at its subfolders, as deep as needed, so each
+    variant is listed and continued from its own folder.
+    """
+
+    folder = Path(mod_root)
+    try:
+        paths = folder_model_paths(folder, limit=limit)
+    except ValueError as error:
+        if not str(error).startswith(_DUPLICATE_COPIES):
+            raise
+        children = sorted((child for child in folder.iterdir() if child.is_dir() and not child.name.startswith(".")),
+                          key=lambda child: child.name.casefold())
+        if any(_is_payload_folder(child.name) for child in children):
+            raise  # Two copies inside one mod's own payload: no variant to pick.
+        mods = [mod for child in children for mod in folder_mods(child, limit=limit)]
+        if not mods:
+            raise
+        if sum(len(paths) for _sub, paths in mods) > limit:
+            raise ValueError("This folder holds more than 64 models across its mods. "
+                             "Choose a folder with fewer of them.") from None
+        return mods
+    return [(folder, paths)] if paths else []
+
+
 def folder_model_choices(mod_root: Path | str) -> list[str]:
     """Every model of a folder too large to list whole, sorted; empty for a mod-sized folder.
 
@@ -964,7 +1005,12 @@ def folder_model_choices(mod_root: Path | str) -> list[str]:
     folder = Path(mod_root).expanduser().resolve()
     if not folder.is_dir():
         raise ValueError("Choose an existing mod folder.")
-    paths = folder_model_paths(folder, limit=MAX_FOLDER_CATALOGUE)
+    try:
+        paths = folder_model_paths(folder, limit=MAX_FOLDER_CATALOGUE)
+    except ValueError as error:
+        if str(error).startswith(_DUPLICATE_COPIES):
+            return []  # Several mods or variants: each is listed from its own folder.
+        raise
     return sorted(paths, key=str.casefold) if len(paths) > MAX_FOLDER_MODELS else []
 
 
@@ -1042,7 +1088,13 @@ def add_built_mod_folder(
         source_path = str(metadata.get("source_path") or "").replace("\\", "/").strip("/")
         # A folder of loose files lists every model it has a mesh or a material
         # sidecar for; a material-only mod continues over the game's own mesh.
-        source_paths = [source_path] if source_path else (folder_model_paths(folder) or _archive_group_mesh_paths(folder)[:1])
+        if source_path:
+            source_paths = [source_path]
+        else:
+            mods = folder_mods(folder)
+            if len(mods) > 1 or (mods and mods[0][0] != folder):
+                return _add_folder_mods(root, folder, mods, project_id)
+            source_paths = (mods[0][1] if mods else []) or _archive_group_mesh_paths(folder)[:1]
     if not source_paths:
         raise ValueError("This folder contains no mesh files.")
     with _INDEX_LOCK:
@@ -1067,6 +1119,43 @@ def add_built_mod_folder(
             "project_id": str(project_id or ""),
             "notes": "",
         } for path in source_paths if path.casefold() not in listed]
+        if not added:
+            raise ValueError("This mod folder is already in the list.")
+        _write_index(root, [*records, *added])
+    return added[0]
+
+
+def _add_folder_mods(root: Path, folder: Path, mods: list[tuple[Path, list[str]]], project_id: str) -> dict[str, object]:
+    """List each mod or variant of a parent folder from its own subfolder."""
+
+    with _INDEX_LOCK:
+        records = _read_index(root)
+        listed = {(str(Path(str(record.get("mod_root") or "")).resolve()).casefold(),
+                   str(record.get("source_archive_path") or "").casefold()) for record in records}
+        added = []
+        for sub, paths in mods:
+            label = sub.relative_to(folder).as_posix() if sub != folder else folder.name
+            for path in paths:
+                if (str(sub).casefold(), path.casefold()) in listed:
+                    continue
+                added.append({
+                    "id": uuid4().hex,
+                    "display_name": f"{folder.name} / {label}" if len(paths) == 1 else f"{folder.name} / {label} - {PurePosixPath(path).stem}",
+                    "mod_root": str(sub),
+                    "zip_path": "",
+                    "built_at": sub.stat().st_mtime,
+                    "manager_profile": "",
+                    "output_kind": "added_folder",
+                    "source_archive_path": path,
+                    "source_package": "",
+                    "source_entry": {},
+                    "source_sha256": "",
+                    "game_source_sha256": "",
+                    "edit_pass": 0,
+                    "draft_dir": "",
+                    "project_id": str(project_id or ""),
+                    "notes": "",
+                })
         if not added:
             raise ValueError("This mod folder is already in the list.")
         _write_index(root, [*records, *added])
@@ -1381,6 +1470,7 @@ __all__ = [
     "add_built_mod_folder",
     "built_mod_companion_entries",
     "folder_model_choices",
+    "folder_mods",
     "folder_model_paths",
     "folder_model_shaders",
     "material_sidecar_path_for_mesh",

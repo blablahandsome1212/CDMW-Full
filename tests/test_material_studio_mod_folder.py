@@ -129,10 +129,30 @@ def test_folder_with_several_models_is_listed_once_per_model(game, tmp_path):
         add_built_mod_folder(game.drafts, mod)
 
 
-def test_parent_of_several_variants_is_refused(game, tmp_path):
+def test_parent_of_several_variants_lists_each_from_its_own_folder(game, tmp_path):
     mod = tmp_path / "Lace Veil"
-    _write(mod, "Blue/" + _SIDECAR, _sidecar(_BASE, _HEIGHT, "0.5"))
-    _write(mod, "Red/" + _SIDECAR, _sidecar(_BASE, _HEIGHT, "0.6"))
+    blue, red = _sidecar(_BASE, _HEIGHT, "0.5"), _sidecar(_BASE, _HEIGHT, "0.6")
+    # Variants at different depths, as mod archives ship them.
+    _write(mod, "[01] Blue/" + _SIDECAR, blue)
+    _write(mod, "More/[02] Red/files/0009/" + _SIDECAR, red)
+    _write(mod, "More/[03] Green/" + _SIDECAR, _sidecar(_BASE, _HEIGHT, "0.7"))
+    assert folder_model_choices(mod) == []  # Listed whole, without the model picker.
+    add_built_mod_folder(game.drafts, mod)
+    rows = {row.display_name: row for row in list_saved_work(game.drafts) if row.kind == KIND_BUILT_MOD}
+    assert set(rows) == {"Lace Veil / [01] Blue", "Lace Veil / More/[02] Red", "Lace Veil / More/[03] Green"}
+    assert {Path(row.mod_root).name for row in rows.values()} == {"[01] Blue", "[02] Red", "[03] Green"}
+    # Each continues with its own variant's files.
+    for name, sidecar in (("Lace Veil / [01] Blue", blue), ("Lace Veil / More/[02] Red", red)):
+        by_path = {entry.path: entry for entry in _launch(game, rows[name]).replacements}
+        assert read_archive_entry_data(by_path[_SIDECAR])[0] == sidecar
+    with pytest.raises(ValueError, match="already in the list"):
+        add_built_mod_folder(game.drafts, mod)
+
+
+def test_one_folder_holding_two_copies_of_a_file_is_still_refused(game, tmp_path):
+    mod = tmp_path / "Lace Veil"
+    _write(mod, _SIDECAR, _sidecar(_BASE, _HEIGHT, "0.5"))
+    _write(mod, "files/0009/" + _SIDECAR, _sidecar(_BASE, _HEIGHT, "0.6"))
     with pytest.raises(ValueError, match="more than one copy"):
         add_built_mod_folder(game.drafts, mod)
     assert not list_saved_work(game.drafts)
