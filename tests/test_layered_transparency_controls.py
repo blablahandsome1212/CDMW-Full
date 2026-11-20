@@ -48,7 +48,8 @@ def test_preview_factors_carry_the_authored_values_and_colour_alpha():
     assert veil[4:9] == (.3, .727, .516, .901, .27)
     # The two displacement scales a layered veil reads sit before the colour.
     assert veil[9:11] == (1., 0.)
-    assert veil[11:14] == pytest.approx((0xd9 / 255,) * 3)
+    # The game's veil shader reads no _dyeingColor since the November 2026 patch.
+    assert veil[11:14] == (1., 1., 1.)
     assert veil[14] == 1.
     # Unauthored conversions inherit the material definition defaults.
     assert preview_factors(ShaderControls("SkinnedMeshGlass"))[4:12] == (.1, .5, .05, 1.52, 1., 1., 1., 1.)

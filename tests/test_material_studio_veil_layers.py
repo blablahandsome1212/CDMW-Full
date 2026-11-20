@@ -59,8 +59,9 @@ def test_the_01_part_has_the_layer_but_no_detail_displacement():
 def test_the_veil_before_the_patch_and_other_shaders_are_unchanged():
     assert veil_layer_inputs(VEIL, BEFORE, BEFORE_TEXTURES) == {}
     result = factors(BEFORE, BEFORE_TEXTURES)
+    # The game reads no veil colour since the patch, so the colour lanes stay white.
     assert result[:15] == pytest.approx((11.0, 1.0, 0.0, 0.0, 0.3, 0.727, 0.516, 0.901, 0.27, 1.0, 0.0,
-                                         217 / 255, 217 / 255, 217 / 255, 1.0))
+                                         1.0, 1.0, 1.0, 1.0))
     assert tuple(result[15:]) == (0.0,) * 17
     # The same rows on another shader never switch the veil lanes on.
     assert veil_layer_inputs("SkinnedMeshGlass", CLOTH_VALUES, CLOTH_TEXTURES) == {}

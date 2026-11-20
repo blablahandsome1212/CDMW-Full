@@ -52,6 +52,10 @@ pub(crate) fn shader_live_factors(row: &Value, family: &Value, value: &Value) ->
         }
         lane += width;
     }
+    if factors[0] == 11.0 {
+        // The game's veil shader reads no _dyeingColor since the November 2026 patch.
+        factors[11..14].fill(1.0);
+    }
     if value["rebuild"].as_bool() == Some(true) && factors[0] == 11.0 {
         // Rewriting a net veil to the older layout drops its detail layers.
         factors[15..23].fill(0.0);
@@ -331,7 +335,7 @@ impl LabApplication {
                             let layered = veil_reads_detail_layers(rows.first().copied(), &shader, &value);
                             let shown = family["fields"].as_array().into_iter().flatten().filter_map(|field| {
                                 let field_name = field["name"].as_str()?;
-                                if veil_field_unread(&shader, field_name, layered)
+                                if veil_field_never_read(&shader, field_name) || veil_field_unread(&shader, field_name, layered)
                                     && !authored.is_some_and(|fields| fields[field_name].is_array()) {
                                     return None; // Not shown, so not part of "every value shown".
                                 }
@@ -396,7 +400,8 @@ impl LabApplication {
                             .or_else(|| layer_originals.as_ref().map(|originals| &originals[name]).filter(|numbers| numbers.is_array()));
                         let original = declared.unwrap_or(&field["default"]).clone();
                         let overridden = value["values"][name].is_array();
-                        if veil_field_unread(&shader, name, veil_layers.is_some()) && declared.is_none() {
+                        if veil_field_never_read(&shader, name)
+                            || veil_field_unread(&shader, name, veil_layers.is_some()) && declared.is_none() {
                             continue;
                         }
                         let mut numbers = if overridden { value["values"][name].clone() } else { original.clone() };
@@ -625,6 +630,13 @@ fn veil_reads_detail_layers(row: Option<&Value>, shader: &str, value: &Value) ->
 
 /// A layered veil does not read the map scale or the colour; any other veil
 /// does not read the two displacement scales.
+/// The game's net veil shader is Ver2 for every material since the November
+/// 2026 patch: its colour is the base colour texture alone and `_dyeingColor`
+/// is never read, so the panel never offers it, even where a row declares it.
+fn veil_field_never_read(shader: &str, name: &str) -> bool {
+    shader == "SkinnedMeshTransparency" && name == "_dyeingColor"
+}
+
 fn veil_field_unread(shader: &str, name: &str, layered: bool) -> bool {
     shader == "SkinnedMeshTransparency" && if layered {
         matches!(name, "_uvScale" | "_dyeingColor")

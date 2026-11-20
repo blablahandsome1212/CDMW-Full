@@ -9367,11 +9367,12 @@ fn shader_panel_shows_a_layered_veils_values_and_hides_the_rows_it_does_not_read
     ui.settle_layout();
     assert!(shows(&ui, "Detail repeat: 5.67 x 5.67"));
     assert!(shows(&ui, "Detail rotation (degrees): -180.0"));
-    // The veil before the patch keeps both rows and has no note.
+    // The veil before the patch keeps its map scale and has no note. The game
+    // shader reads no veil colour since the patch, so that row is never offered.
     ui.application.cdmw_state["shader_controls"] = veil_shader_state();
     ui.settle_layout();
     assert!(!shows(&ui, "This net veil uses detail layers"));
-    assert!(shows(&ui, "Thread map scale") && shows(&ui, "Veil colour RGB"));
+    assert!(shows(&ui, "Thread map scale") && !shows(&ui, "Veil colour RGB"));
     assert!(!shows(&ui, "Thread width scale") && !shows(&ui, "Lace strength") && !shows(&ui, "Lace repeat X / Y"));
 
     // A rewrite to the older layout previews without the detail layers.
@@ -9425,8 +9426,7 @@ fn shader_panel_saves_the_shown_values_as_a_preset_and_deletes_a_saved_one() -> 
     }).ok_or("save preset command")?;
     // Every field as shown: the changed one, the source's, and the definition default for the rest.
     assert_eq!(saved, json!({"preset": {"action": "save", "shader": "SkinnedMeshTransparency", "name": "Thin lace", "values": {
-        "_netPitch": [0.3], "_netThread": [0.5], "_glow": [0.5164705882352941], "_sheen": [0.901], "_uvScale": [0.27],
-        "_dyeingColor": [1.0, 1.0, 1.0]}}}));
+        "_netPitch": [0.3], "_netThread": [0.5], "_glow": [0.5164705882352941], "_sheen": [0.901], "_uvScale": [0.27]}}}));
 
     // The user's preset is offered under its own name and applies like a built-in one.
     ui.click("Choose a preset")?;
@@ -9455,7 +9455,8 @@ fn shader_controls_open_on_the_source_values_preview_live_and_commit_on_release(
     ui.reveal("Sheer net veil (experimental)")?;
     ui.reveal("Original: 0.727")?;
     ui.reveal("Original: 0.901")?;
-    ui.reveal("Not set by this material. Default: 1.000, 1.000, 1.000")?;
+    // The veil colour is never offered: the game's veil shader ignores it.
+    assert!(ui.reveal("Not set by this material. Default: 1.000, 1.000, 1.000").is_err());
     ui.click("Source textures")?;
     ui.reveal("_heightTexture: cd_phw_00_hel_00_0219_disp.dds")?;
     // Opening the panel sends nothing and previews nothing.
@@ -9520,11 +9521,11 @@ fn shader_live_factors_replace_only_edited_lanes() {
     let state = veil_shader_state();
     let (row, family) = (&state["parts"][0], &state["catalogue"][0]);
     let untouched = crate::cdmw_shader_controls::shader_live_factors(row, family, &json!({"shader": "SkinnedMeshTransparency", "values": {}})).unwrap();
-    assert_eq!(&untouched[..15], &[11.0, 1.0, 0.0, 0.0, 0.3, 0.727, 0.516, 0.901, 0.27, 1.0, 0.0, 0.851, 0.851, 0.851, 1.0]);
-    // A three-lane colour starts after the seven scalar fields; the alpha lane after it is kept.
+    // The game's veil shader reads no _dyeingColor since the November 2026 patch: its lanes stay white.
+    assert_eq!(&untouched[..15], &[11.0, 1.0, 0.0, 0.0, 0.3, 0.727, 0.516, 0.901, 0.27, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0]);
     let dyed = crate::cdmw_shader_controls::shader_live_factors(row, family, &json!({"shader": "SkinnedMeshTransparency",
         "values": {"_dyeingColor": [0.25, 0.5, 0.75], "_netPitch": [7.0]}})).unwrap();
-    assert_eq!(&dyed[4..15], &[1.0, 0.727, 0.516, 0.901, 0.27, 1.0, 0.0, 0.25, 0.5, 0.75, 1.0]);
+    assert_eq!(&dyed[4..15], &[1.0, 0.727, 0.516, 0.901, 0.27, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0]);
     // Painted masks and families without a host base cannot be previewed locally.
     assert!(crate::cdmw_shader_controls::shader_live_factors(row, family, &json!({"shader": "SkinnedMeshTransparency", "values": {}, "cutout_mask": {}})).is_none());
     assert!(crate::cdmw_shader_controls::shader_live_factors(&json!({"preview_base": {}}), family, &json!({"shader": "SkinnedMeshTransparency", "values": {}})).is_none());

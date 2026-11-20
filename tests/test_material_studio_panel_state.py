@@ -55,7 +55,7 @@ def test_preview_base_is_the_vector_the_viewport_already_draws():
     assert row["shader_options"]["SkinnedMeshTransparency"] == ""
     assert tuple(row["preview_base"]["SkinnedMeshTransparency"]) == tuple(authored_blended_factors(part))
     assert row["preview_base"]["SkinnedMeshTransparency"][:15] == [
-        11.0, 1.0, 0.0, 0.0, 0.3, 0.727, 0.516, 0.901, 0.27, 1.0, 0.0, 217 / 255, 217 / 255, 217 / 255, 1.0]
+        11.0, 1.0, 0.0, 0.0, 0.3, 0.727, 0.516, 0.901, 0.27, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0]  # The game reads no veil colour.
     # Families the source cannot become have no live-preview base.
     assert "Dissolve" not in row["preview_base"]
 
@@ -64,6 +64,8 @@ def test_one_parser_feeds_the_panel_and_the_renderer():
     veil = family_for("SkinnedMeshTransparency")
     for field in veil.fields:
         if field.name in VEIL_LAYER_FIELDS:  # Declared by a veil with detail layers only.
+            continue
+        if field.name == "_dyeingColor":  # Shown as authored, never drawn: the game ignores it.
             continue
         shown = authored_field_numbers(field, VEIL_B.get(field.name))
         assert shown is not None

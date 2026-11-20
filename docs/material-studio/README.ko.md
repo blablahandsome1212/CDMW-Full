@@ -293,6 +293,13 @@
 - 결과: Rust `cdmw_mesh_lab` 724 통과 / 2 실패(기준선에서도 실패하는 `loader` 테스트, 단독 실행 시 통과하는 60초 제한 hair 테스트). 관련 Python 테스트 83개 파일은 원작자 기준선과 파일별 결과가 같다. 새로 실패한 것은 bake를 쓰는 Ver2 변환 테스트 4개뿐이며, 네이티브 DDS 디코더가 없어서다(Windows CI에서 확인).
 - 인게임 확인 필요: Cloth 계열을 망사로 바꾼 모드가 게임에서 깨지지 않고 비쳐 보이는지. Cloth 셰이더 고유의 물리·바람 설정은 재질 행이 아니라 메시 쪽에 있다고 보고 있지만 확인하지 않았다.
 
+### 망사 색 칸 숨김 (2026-11-20)
+- 사용자 확인: 망사의 "Veil colour RGB"(`_dyeingColor`)를 바꿔도 게임에서 색이 바뀌지 않는다. 다른 사람의 Lace Veil 모드도 색을 바꿀 때 base 텍스처를 바꾼다.
+- 근거: 11월 패치 뒤 게임의 `SkinnedMeshTransparency`는 모든 재질에서 Ver2 셰이더이고, DXIL에서 색은 `_baseColorTexture`만 쓴다(`_dyeingColor` 곱 없음).
+- 수정: 패널이 망사의 `_dyeingColor`를 행이 있어도 보이지 않고, 프리셋 저장에도 넣지 않는다. 미리보기(Python `preview_factors`, Rust `shader_live_factors`)의 11–13번 칸은 항상 1(흰색)이다.
+- 색을 바꾸려면 base 텍스처를 교체하거나, 강제 교체로 들어간 단색 base(`texture/nonetexture0xffRRGGBB.dds`)의 RRGGBB를 바꾼다.
+- 남은 차이: 미리보기의 패치 전 망사 경로(15번 칸 0)는 실 굵기·알파 식이 패치 전 그대로다. 게임은 모든 망사에 Ver2 식을 쓰므로, 강제 교체한 망사의 미리보기 밀도는 게임과 다를 수 있다.
+
 ## 남긴 결정 사항
 
 1. `_screenSpaceDisplacementScale`은 슬라이더로 추가하지 않았다. 유일한 근거인 Angel Teddy 모드가 이 행에 작은 ItemID 3을 쓰는데, 작은 ID의 규칙이 밝혀지지 않았다. 다만 Glass를 "다시 쓰기"로 만들면 그 모드의 구성대로 이 행(ItemID 3)을 넣는다. 원본에 값이 있으면 그 값을, 없으면 0을 쓴다.

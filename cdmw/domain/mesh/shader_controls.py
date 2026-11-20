@@ -684,6 +684,9 @@ def preview_factors(controls, authored=None):
         colour = family.fields[-1].name
         result.append(_colour_alpha(authored.get(colour)))
     if family.shader == "SkinnedMeshTransparency":
+        # The game's veil shader reads no _dyeingColor since the November 2026
+        # patch; the colour is the base colour texture alone.
+        result[11:14] = [1., 1., 1.]
         result.extend(veil_layer_factors(authored, values))
     result.extend([0.] * (32 - len(result)))
     result[30] = float(controls.cutout_mask is not None)
