@@ -671,6 +671,20 @@ impl JiggleSource {
 }
 
 impl CdmwBridge {
+    /// The step a long host command reports while the editor waits on it
+    /// (`host-progress.json`, written by `cdmw.services.host_progress`), with
+    /// the seconds since that step began. None when nothing is reported.
+    pub fn host_progress(&self) -> Option<(Value, f64)> {
+        let path = self.root.join("host-progress.json");
+        let bytes = fs::read(&path).ok()?;
+        if bytes.len() > 4096 {
+            return None;
+        }
+        let value: Value = serde_json::from_slice(&bytes).ok()?;
+        let age = fs::metadata(&path).ok()?.modified().ok()?.elapsed().map_or(0.0, |age| age.as_secs_f64());
+        value.is_object().then_some((value, age))
+    }
+
     /// Capture a reference only; the loader performs file I/O and decoding.
     pub(super) fn jiggle_source(&self, state: &Value) -> Result<JiggleSource, SessionError> {
         let reference = state["jiggle"]["decoded"].get("file")

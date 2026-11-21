@@ -1794,6 +1794,7 @@ def _validate_owned_session_tree(
         "hair-state.json",
         "jiggle-rig.json",
         "host-control.json",
+        "host-progress.json",
     }
     entry_count = 0
     total_bytes = 0

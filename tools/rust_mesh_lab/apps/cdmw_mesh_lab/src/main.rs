@@ -2390,6 +2390,8 @@ struct LabApplication {
     vertex_inspector: cdmw_vertex_inspector::VertexInspector,
     hair: HairEditor,
     cdmw_pending_request: Option<CdmwPendingRequest>,
+    /// The host's reported step for the pending request, read at most every 0.25 s.
+    cdmw_host_progress: Option<(std::time::Instant, Option<(Value, f64)>)>,
     cdmw_normals_feedback: Option<String>,
     cdmw_uv_feedback: Option<String>,
     cdmw_morph_value_drafts: HashMap<String, f64>,
@@ -2598,6 +2600,7 @@ impl LabApplication {
             vertex_inspector: cdmw_vertex_inspector::VertexInspector::default(),
             hair: HairEditor::default(),
             cdmw_pending_request: None,
+            cdmw_host_progress: None,
             cdmw_normals_feedback: None,
             cdmw_uv_feedback: None,
             cdmw_morph_value_drafts: HashMap::new(),

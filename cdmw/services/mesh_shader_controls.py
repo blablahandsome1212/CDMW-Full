@@ -60,8 +60,9 @@ def build_shader_control_files(state, original, companion_files, *, stop_event=N
                 key = texture.replace("\\", "/").casefold()
                 file = files.get(key, sources.get(key))
                 return file.data if file is not None else None
+            from cdmw.services.host_progress import report_bake_progress
             source_text, baked = bake_equipment_glass(source_text, choices, state.target_path,
-                read_texture, stop_event=stop_event)
+                read_texture, stop_event=stop_event, on_progress=report_bake_progress)
             for texture, data in baked.items():
                 files[texture.casefold()] = ReplacementFile(texture, data)
         owned = owned_texture_files(choices, state.target_path)

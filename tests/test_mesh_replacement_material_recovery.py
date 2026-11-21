@@ -309,3 +309,22 @@ def test_cancelled_material_preparation_removes_temporary_dds_without_changing_m
             pytest.fail("Cancelled material preparation completed")
     assert staged and all(not path.parent.exists() for path in staged)
     assert not any(getattr(part, "preview_material_texture_inputs", ()) for part in snapshot.mesh.submeshes)
+
+
+def test_constant_engine_textures_need_no_prepared_file(editor, tmp_path):
+    # Force replace writes nonetexture0xAARRGGBB for a missing base colour and
+    # for the net veil's even thread map; the engine makes them, no file exists.
+    service, sid = editor
+    snapshot = service.capture_export_snapshot(sid)
+    target, context, _ = material_fixture(tmp_path, snapshot)
+    files = capture_replacement_dependencies(target, context)
+    constant = b"texture/nonetexture0xffffffff.dds"
+    files = tuple(replace(file, data=file.data.replace(b"character/texture/original1.dds", constant))
+                  if file.path.endswith(".pac_xml") else file
+                  for file in files if not file.path.endswith("original1.dds"))
+    assert any(constant in file.data for file in files if file.path.endswith(".pac_xml"))
+    with prepared_replacement_material_mesh(snapshot.mesh, files, required=True) as prepared:
+        inputs = [item for part in prepared.submeshes for item in getattr(part, "preview_material_texture_inputs", ())]
+        # The part with a real texture keeps it; the one with only a constant is not refused.
+        assert inputs and not any("nonetexture" in str(item.source_texture_path) for item in inputs)
+        assert [part.vertices for part in prepared.submeshes] == [part.vertices for part in snapshot.mesh.submeshes]

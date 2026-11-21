@@ -18,7 +18,7 @@ _BAKE_CACHE = OrderedDict()
 _BAKE_CACHE_LOCK = threading.Lock()
 
 
-def bake_equipment_glass(text, choices, model_path, read_texture, *, on_log=None, stop_event=None):
+def bake_equipment_glass(text, choices, model_path, read_texture, *, on_log=None, stop_event=None, on_progress=None):
     """Flatten supported layered equipment before the strict glass XML writer."""
     from cdmw.core.material_shader_controls import (BAKED_CONVERSION_SHADERS, equipment_glass_needs_bake, _parameter_rows,
                                                     validate_source, material_variant_blocks)
@@ -32,7 +32,7 @@ def bake_equipment_glass(text, choices, model_path, read_texture, *, on_log=None
             block = match.group()
             start, end = block.find('>') + 1, -len('</ModelProperty>')
             edited, baked = bake_equipment_glass(block[start:end], choices, model_path, read_texture,
-                                                on_log=on_log, stop_event=stop_event)
+                                                on_log=on_log, stop_event=stop_event, on_progress=on_progress)
             textures.update(baked)
             text = text[:match.start()] + block[:start] + edited + block[end:] + text[match.end():]
         return text, textures
@@ -71,7 +71,7 @@ def bake_equipment_glass(text, choices, model_path, read_texture, *, on_log=None
     if model_path.endswith(".pac_xml"):
         model_path = model_path[:-4]
     text, textures, _ = _bake_template_materials(snapshot, text, model_path, selected, absorption,
-        purpose="translucency", on_log=on_log, on_progress=None, stop_event=stop_event)
+        purpose="translucency", on_log=on_log, on_progress=on_progress, stop_event=stop_event)
     return text, textures
 
 
@@ -144,6 +144,16 @@ def _bake_template_materials(snapshot, text, model_path, selected, settings, *, 
                 if binding.submesh_name.casefold() == row.submesh_name.casefold()
                 and not _is_placeholder_model_texture(binding.texture_path))
             fingerprints = []
+            # Height maps shape the surface, not the baked colour, normal or
+            # material maps; a session can lack one (a continued mod lists only
+            # the files its own material names), so the bake goes on without it.
+            missing_heights = {binding.texture_path for binding in material_bindings
+                               if "height" in binding.parameter_name.casefold()
+                               and binding.texture_path not in payloads and not snapshot.has_entry(binding.texture_path)}
+            if missing_heights:
+                report(f"Leaving out a height texture that is not available: {sorted(missing_heights)[0]}")
+                material_bindings = tuple(binding for binding in material_bindings
+                                          if binding.texture_path not in missing_heights)
             for path in dict.fromkeys(binding.texture_path for binding in material_bindings):
                 raise_if_cancelled(stop_event)
                 if path not in payloads:

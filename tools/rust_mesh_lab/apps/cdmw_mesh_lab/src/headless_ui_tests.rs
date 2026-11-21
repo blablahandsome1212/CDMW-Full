@@ -9682,3 +9682,31 @@ fn shader_controls_disable_incompatible_and_unknown_selections_but_allow_restore
     assert!(!has_host_command(&settled_shader_actions(&mut ui), "replacement_shader_controls"));
     Ok(())
 }
+
+#[test]
+fn a_pending_bake_shows_its_material_step_and_progress() -> TestResult {
+    let root = tempdir()?;
+    let mut ui = HeadlessUi::new_integrated_cdmw_for_controls(triangle_application()?, egui::vec2(1440.0, 900.0));
+    ui.application.cdmw_bridge = Some(CdmwBridge::for_test(root.path().to_path_buf(), "bake", 1, 0));
+    ui.application.cdmw_pending_request = Some(CdmwPendingRequest {
+        request_id: 1,
+        event: "command_result",
+        label: "Shader experiments".to_owned(),
+        origin: None,
+    });
+    let shows = |ui: &HeadlessUi, start: &str| ui.output.shapes.iter().any(|shape|
+        matches!(&shape.shape, egui::Shape::Text(text) if text.galley.job.text.starts_with(start)));
+    ui.settle_layout();
+    // Nothing reported yet: only the spinner.
+    assert!(!shows(&ui, "Baking material"));
+    std::fs::write(root.path().join("host-progress.json"), serde_json::to_vec(&json!({
+        "kind": "bake", "material": 2, "materials": 3, "stage": 3, "fraction": 0.5, "time": 0.0}))?)?;
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    ui.settle_layout();
+    assert!(shows(&ui, "Baking material 2/3: Compressing colour texture ("));
+    // The reply clears it.
+    ui.application.cdmw_pending_request = None;
+    ui.settle_layout();
+    assert!(!shows(&ui, "Baking material") && ui.application.cdmw_host_progress.is_none());
+    Ok(())
+}

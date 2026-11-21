@@ -259,8 +259,12 @@ def run_replacement_command(authoring, command, args, stop_event):
         result = set_collision_volume_edit(authoring, snapshot, args, entry=entry,
                                            dependencies=dependencies, stop_event=stop_event)
     elif command == "replacement_shader_controls":
+        from cdmw.services.host_progress import host_progress
         from cdmw.services.mesh_shader_controls import set_shader_controls
-        result = set_shader_controls(authoring, snapshot, args, entry=entry, dependencies=dependencies, stop_event=stop_event)
+        # A layered conversion bakes textures; the editor shows its steps.
+        with host_progress(getattr(authoring, "root", None)):
+            result = set_shader_controls(authoring, snapshot, args, entry=entry, dependencies=dependencies,
+                                         stop_event=stop_event)
     elif command == "replacement_emission":
         from cdmw.services.mesh_emission import set_emission
         result = set_emission(authoring, snapshot, args, entry=entry, dependencies=dependencies, stop_event=stop_event)

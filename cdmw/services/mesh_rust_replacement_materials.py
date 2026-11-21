@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 from cdmw.core.common import raise_if_cancelled
 from cdmw.domain.mesh.replacement import bound_part_indices
 from cdmw.services.mesh_replacement_materials import _sidecar_text, material_binding_name
+from cdmw.core.archive_model_texture_semantics import _is_placeholder_model_texture
 
 
 def replacement_material_key(mesh, state):
@@ -122,16 +123,23 @@ def prepared_replacement_material_mesh(mesh, files, *, required, stop_event=None
                 binding_names = {name.casefold() for binding in bindings for name in
                                  (binding.material_name, binding.submesh_name, binding.part_name) if name}
                 owner_name = material_binding_name(part, binding_names)
+                # The engine's constant textures (nonetexture0xAARRGGBB) are no
+                # files to prepare; force replace writes them for a missing base
+                # colour and for the net veil's even thread map.
                 owned = [binding for binding in bindings
                          if owner_name in {name.casefold() for name in
                                            (binding.material_name, binding.submesh_name, binding.part_name) if name}
                          and _material_input_texture_role(binding) not in retained_roles]
+                constant = [binding for binding in owned if _is_placeholder_model_texture(binding.texture_path)]
+                owned = [binding for binding in owned if binding not in constant]
                 missing = [binding.texture_path for binding in owned
                            if binding.texture_path.replace("\\", "/").casefold() not in files]
                 recovered_roles = {_material_input_texture_role(binding) for binding in owned} if not missing else set()
                 for role, error in invalid_roles.items():
                     if role not in retained_roles | recovered_roles:
                         raise error
+                if not owned and constant and not missing:
+                    continue  # Only constant textures: nothing to prepare.
                 if not owned or missing:
                     if required:
                         if missing:

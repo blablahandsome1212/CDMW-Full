@@ -155,3 +155,30 @@ def test_a_layer_coloured_material_without_a_base_texture_gets_a_constant_colour
     _shader, _values, textures = control_material_sources(edited)["blade"]
     assert textures["_baseColorTexture"] == "texture/nonetexture0xffd1c1b2.dds"
     assert textures["_heightTexture"].endswith("shirt_disp.dds")
+
+
+def test_the_bake_goes_on_without_a_height_map_the_session_lacks():
+    # A continued mod lists only the files its own material names; the game
+    # material it started from can name a height map the session never read.
+    from tests.test_layered_glass_controls import layered_source as _layered
+    files = _layered("SkinnedMeshStandard_Ver2")
+    text = files.side_files[XML].decode()
+    missing = "character/texture/glass_disp.dds"
+    row = (f'<MaterialParameterTexture StringItemID="_heightTexture" ItemID="4" _name="_heightTexture" Index="40">'
+           f'<ResourceReferencePath_ITexture Name="_value" _path="{missing}"/></MaterialParameterTexture>')
+    blade_end = text.index("</Vector>", text.index('_subMeshName="Blade"'))
+    files = replace(files, side_files={**files.side_files, XML: (text[:blade_end] + row + text[blade_end:]).encode()})
+    seen = {}
+
+    def bake(row, bindings, payloads, model_path, output, index, report, stop_event):
+        seen["paths"] = {binding.texture_path for binding in bindings}
+        return {"base": b"DDS base", "normal": b"DDS normal", "material": b"DDS material"}
+
+    mesh, state = mesh_state(files)
+    choice = ShaderControls("SkinnedMeshTransparency", (("_netPitch", (.2,)),))
+    state = replace(state, parts=(replace(state.parts[0], shader_controls=choice), state.parts[1]))
+    with patch("cdmw.services.new_item_template_materials._bake_material_maps", side_effect=bake):
+        side = {file.path: file.data for file in build_shader_control_files(state, mesh, ())}
+    assert missing not in seen["paths"] and "character/texture/glass_base.dds" in seen["paths"]
+    blade, _ = find_material_wrappers(side[XML].decode())
+    assert blade.shader == "SkinnedMeshTransparency"

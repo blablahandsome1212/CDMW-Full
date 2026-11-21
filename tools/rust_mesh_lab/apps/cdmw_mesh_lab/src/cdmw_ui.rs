@@ -1774,7 +1774,51 @@ impl LabApplication {
             || self.hair.preparing()
     }
 
+    /// A texture bake can take minutes: show which material and step it is on,
+    /// how far along, and how long the step has run, so a stall can be told apart.
+    fn refresh_cdmw_host_progress(&mut self, waiting: bool) {
+        if !waiting {
+            self.cdmw_host_progress = None;
+            return;
+        }
+        let stale = self.cdmw_host_progress.as_ref()
+            .is_none_or(|(read, _)| read.elapsed() >= std::time::Duration::from_millis(250));
+        if stale {
+            let progress = self.cdmw_bridge.as_ref().and_then(|bridge| bridge.host_progress());
+            self.cdmw_host_progress = Some((std::time::Instant::now(), progress));
+        }
+    }
+
+    fn draw_cdmw_host_progress(&self, ui: &mut egui::Ui) {
+        let Some((read, Some((progress, age)))) = self.cdmw_host_progress.as_ref() else {
+            return;
+        };
+        if progress["kind"] != "bake" {
+            return;
+        }
+        let stage = match progress["stage"].as_u64() {
+            Some(0) => crate::localization::tr("Reading source textures"),
+            Some(1) => crate::localization::tr("Decoding source textures"),
+            Some(2) => crate::localization::tr("Combining material layers"),
+            Some(3) => crate::localization::tr("Compressing colour texture"),
+            Some(4) => crate::localization::tr("Compressing normal map"),
+            _ => crate::localization::tr("Compressing surface map"),
+        };
+        let material = progress["material"].as_u64().unwrap_or(1);
+        let materials = progress["materials"].as_u64().unwrap_or(1);
+        let seconds = (age + read.elapsed().as_secs_f64()).floor() as u64;
+        let fraction = progress["fraction"].as_f64().unwrap_or(0.0).clamp(0.0, 1.0) as f32;
+        let text = crate::localization::tr(format!("Baking material {material}/{materials}: {stage} ({seconds} s)"));
+        ui.add(egui::ProgressBar::new(fraction).desired_width(220.0).text(text.clone()))
+            .on_hover_text(crate::localization::tr(
+                "Layered materials are flattened into one texture before the shader can change. \
+                 The seconds count the current step; one that keeps counting for minutes has likely stalled."));
+        ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
+    }
+
     fn draw_cdmw_session_bar(&mut self, root_ui: &mut egui::Ui, actions: &mut Vec<UiAction>) {
+        self.refresh_cdmw_host_progress(self.cdmw_pending_request.as_ref().is_some_and(|pending|
+            !matches!(pending.origin, Some(CdmwRequestOrigin::Selection | CdmwRequestOrigin::WeaponPlacement))));
         let busy = self.cdmw_show_busy_controls();
         let undo_count = state_u64(&self.cdmw_state, "undo_count");
         let redo_count = state_u64(&self.cdmw_state, "redo_count");
@@ -1789,9 +1833,13 @@ impl LabApplication {
             .show(root_ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(RichText::new(crate::localization::tr("Mesh Editor")).heading().strong());
-                    if self.cdmw_pending_request.as_ref().is_some_and(|pending|
-                        !matches!(pending.origin, Some(CdmwRequestOrigin::Selection | CdmwRequestOrigin::WeaponPlacement))) || self.hair.saving() {
+                    let waiting = self.cdmw_pending_request.as_ref().is_some_and(|pending|
+                        !matches!(pending.origin, Some(CdmwRequestOrigin::Selection | CdmwRequestOrigin::WeaponPlacement)));
+                    if waiting || self.hair.saving() {
                         ui.add(Spinner::new());
+                    }
+                    if waiting {
+                        self.draw_cdmw_host_progress(ui);
                     }
                     if wide {
                         ui.separator();

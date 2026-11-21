@@ -306,6 +306,11 @@
 - 한 모드의 payload 안(`character`, `files`, `0009` 등이 같은 단계에 있는 경우)에서 사본이 겹치면 고를 변형이 없으므로 이전처럼 거절한다.
 - 나눈 모드들의 모델 합계가 64개를 넘으면 거절한다.
 
+### bake 진행 표시, 높이 맵 누락, 단색 텍스처 (2026-11-21)
+- **bake 진행 표시**: 레이어 굽기는 메시지("Reading source textures…" 등)를 내지만 Mesh Editor 경로가 받지 않아 스피너만 돌았다. 셰이더 명령이 도는 동안 호스트가 세션 폴더에 `host-progress.json`(재질 n/m, 단계 0–5, 진행률)을 쓰고(`cdmw/services/host_progress.py`), 편집기가 0.25초마다 읽어 상단 바 스피너 옆에 "재질 굽는 중 2/3: 색 텍스처 압축 (12초)" 게이지를 그린다. 초는 현재 단계의 경과 시간이라, 몇 분째 오르면 멈춘 것으로 판단할 수 있다. 명령이 끝나면 파일을 지운다. BC7 압축 한 장 안의 퍼센트는 네이티브 인코더 안이라 받을 수 없다.
+- **높이 맵 누락**: bake는 텍스처를 세션 파일(`state.dependencies`, companion)에서만 찾는다. 이어서 연 모드 세션에는 원본 게임 재질의 `_heightTexture`(`phw_00_uw_00_0001_disp.dds`)가 없어 "cannot prepare translucency; missing texture"로 멈췄다. 높이 맵은 구운 색·노멀·material 맵에 쓰이지 않으므로, 없으면 빼고 진행한다(로그에 남김). 다른 텍스처가 없으면 여전히 거절한다.
+- **단색 텍스처**: 강제 교체가 쓰는 `texture/nonetexture0x…` 텍스처는 엔진이 만드는 것이라 파일이 없다. 미리보기 재질 준비(`prepared_replacement_material_mesh`)가 이를 "Missing prepared texture"로 거절해, base 텍스처를 교체하면 오류가 났다. 이제 단색 텍스처는 준비 대상에서 빼고, 단색만 있는 부위도 거절하지 않는다.
+
 ## 남긴 결정 사항
 
 1. `_screenSpaceDisplacementScale`은 슬라이더로 추가하지 않았다. 유일한 근거인 Angel Teddy 모드가 이 행에 작은 ItemID 3을 쓰는데, 작은 ID의 규칙이 밝혀지지 않았다. 다만 Glass를 "다시 쓰기"로 만들면 그 모드의 구성대로 이 행(ItemID 3)을 넣는다. 원본에 값이 있으면 그 값을, 없으면 0을 쓴다.
